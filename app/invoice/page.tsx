@@ -5,7 +5,7 @@ import { DragDropContext, Droppable, Draggable, DropResult } from 'react-beautif
 import 'jspdf-autotable'
 import jsPDF from 'jspdf'
 import { UserOptions } from 'jspdf-autotable'
-import { ChevronDown, ChevronRight, Menu, X, Home, Rocket, Lightbulb, Map, Target, ClipboardCheck, Zap, Upload, ChartBar, DollarSign, FileText } from 'lucide-react'
+import { ChevronDown, ChevronRight, Menu, X, Home, Rocket, Lightbulb, Map, Target, ClipboardCheck, Zap, Upload, ChartBar, DollarSign, FileText, Trash2 } from 'lucide-react'
 import Link from 'next/link'
 import { motion, AnimatePresence } from 'framer-motion'
 import { Poppins } from 'next/font/google'
@@ -22,7 +22,6 @@ declare module 'jspdf' {
   }
 }
 
-// Add this function
 function getStableId(index: number): string {
   return `item-${index + 1}`;
 }
@@ -178,9 +177,7 @@ export default function InvoiceCreator() {
   ])
   const [notes, setNotes] = useState('Thanks for your business! We would appreciate timely payment of the total amount reflected in here. Please feel free to contact us for any questions or concerns.')
   const [isSidebarOpen, setIsSidebarOpen] = useState(false)
-  const [logo] = useState<string>('https://media.discordapp.net/attachments/1217830384545562655/1296759070778200094/1.png?ex=671caeff&is=671b5d7f&hm=bf2144f269890224628a76e3ce829a6cab55abd878d5c572bef62671466736b1&=&format=webp&quality=lossless') // Updated logo state
-  // Remove this line
-  // const fileInputRef = useRef<HTMLInputElement>(null)
+  const [logo] = useState<string>('https://media.discordapp.net/attachments/1217830384545562655/1296759070778200094/1.png?ex=671caeff&is=671b5d7f&hm=bf2144f269890224628a76e3ce829a6cab55abd878d5c572bef62671466736b1&=&format=webp&quality=lossless')
   const [templateData, setTemplateData] = useState('')
 
   const addItem = () => {
@@ -194,6 +191,10 @@ export default function InvoiceCreator() {
     setItems(items.map(item =>
       item.id === id ? { ...item, [field]: value } : item
     ))
+  }
+
+  const deleteItem = (id: string) => {
+    setItems(items.filter(item => item.id !== id))
   }
 
   const onDragEnd = (result: DropResult) => {
@@ -212,18 +213,6 @@ export default function InvoiceCreator() {
       totalToPay: acc.totalToPay + item.amount
     }), { netSalesTotal: 0, totalToPay: 0 })
   }, [items])
-
-  // Remove this function
-  // const handleLogoUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
-  //   const file = event.target.files?.[0]
-  //   if (file) {
-  //     const reader = new FileReader()
-  //     reader.onload = (e) => {
-  //       setLogo(e.target?.result as string)
-  //     }
-  //     reader.readAsDataURL(file)
-  //   }
-  // }
 
   const generatePDF = () => {
     const doc = new jsPDF()
@@ -325,6 +314,8 @@ export default function InvoiceCreator() {
     const netSalesTips = parseFloat(dataObj['Net Sales/Tips'].replace(',', '')) || totalSales
     const inflowVVFees = parseFloat(dataObj['Inflow/VV FEES'].replace(',', '')) || (totalSales - netPay)
 
+    
+
     setItems([
       {
         id: getStableId(0),
@@ -374,27 +365,9 @@ export default function InvoiceCreator() {
                 <h2 className="text-xl">CONNECT CHATTING LLC</h2>
               </div>
               <div className="flex items-center">
-                {/* Remove this button and input */}
-                {/* <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() => fileInputRef.current?.click()}
-                  className="flex items-center mr-4"
-                >
-                  <Upload className="w-4 h-4 mr-2" />
-                  {logo ? 'Change Logo' : 'Upload Logo'}
-                </Button> */}
                 {logo && (
                   <img src={logo} alt="Company Logo" className="w-8 h-8 object-contain" />
                 )}
-                {/* Remove this input */}
-                {/* <input
-                  type="file"
-                  ref={fileInputRef}
-                  onChange={handleLogoUpload}
-                  accept="image/*"
-                  className="hidden"
-                /> */}
               </div>
             </div>
 
@@ -483,6 +456,7 @@ export default function InvoiceCreator() {
                           <th className="p-2 text-right border">NET SALES/TIPS</th>
                           <th className="p-2 text-right border">INFLOW/VV FEES</th>
                           <th className="p-2 text-right border">AMOUNT</th>
+                          <th className="p-2 text-center border">ACTIONS</th>
                         </tr>
                       </thead>
                       <tbody>
@@ -528,6 +502,15 @@ export default function InvoiceCreator() {
                                     className="w-full p-1 border rounded text-right"
                                   />
                                 </td>
+                                <td className="p-2 border text-center">
+                                  <button
+                                    onClick={() => deleteItem(item.id)}
+                                    className="p-1 bg-red-500 text-white rounded hover:bg-red-600 transition-colors"
+                                    aria-label="Delete item"
+                                  >
+                                    <Trash2 size={16} />
+                                  </button>
+                                </td>
                               </tr>
                             )}
                           </Draggable>
@@ -536,17 +519,17 @@ export default function InvoiceCreator() {
                       </tbody>
                       <tfoot>
                         <tr>
-                          <td colSpan={2}></td>
+                          <td colSpan={3}></td>
                           <td className="p-2 text-right font-bold">NET SALES TOTAL:</td>
                           <td className="p-2 text-right border">${calculateTotals().netSalesTotal.toFixed(2)}</td>
                         </tr>
                         <tr>
-                          <td colSpan={2}></td>
+                          <td colSpan={3}></td>
                           <td className="p-2 text-right font-bold">TOTAL TO PAY:</td>
                           <td className="p-2 text-right border">${calculateTotals().totalToPay.toFixed(2)}</td>
                         </tr>
                         <tr>
-                          <td colSpan={4} className="text-right">
+                          <td colSpan={5} className="text-right">
                             <button
                               onClick={addItem}
                               className="p-2 bg-blue-500 text-white rounded-full hover:bg-blue-600 transition-colors"
@@ -565,11 +548,6 @@ export default function InvoiceCreator() {
                 </Droppable>
               </DragDropContext>
             </div>
-
-            {/* Remove this button */}
-            {/* <button onClick={addItem} className="mb-4 px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600">
-              Add Item
-            </button> */}
 
             <div className="bg-blue-200 p-4 mb-4">
               <label htmlFor="notes" className="block font-bold mb-2">NOTES:</label>
