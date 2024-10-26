@@ -229,12 +229,12 @@ export default function CombinedDashboard() {
     const updatedPayPeriods = payPeriods.map(period => {
       let status: PayPeriod['status'] = 'Inactive Pay Period'
       
-      if (isBefore(now, period.startDate)) {
-        status = 'Inactive Pay Period'
+      if (isSameDay(now, period.startDate) || (isAfter(now, period.startDate) && isBefore(now, period.endDate))) {
+        status = 'Active Pay Period'
       } else if (isAfter(now, period.endDate)) {
         status = 'Chatters Paid'
       } else {
-        status = 'Active Pay Period'
+        status = 'Inactive Pay Period'
       }
 
       // Calculate total payout for the period
