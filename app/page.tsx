@@ -1,6 +1,6 @@
 'use client'
 
-import React, { useState } from 'react'
+import React, { useState, useEffect } from 'react'
 import { CalendarIcon, XCircleIcon, ChevronDownIcon } from 'lucide-react'
 import { useRouter } from 'next/navigation'
 
@@ -35,9 +35,32 @@ const modelOptions = [
 
 const chatterNames = ['Cado', 'Janko', 'Moot', 'Stefq', 'Dayo', 'Angel', 'Christine', 'Death', 'Eryx', 'Gem', 'Mei', 'Raluca', 'Rommel'];
 
+interface PayPeriod {
+  start: Date;
+  end: Date;
+  invoiceDate: Date;
+  chatterPayDate: Date;
+}
+
+const payPeriods: PayPeriod[] = [
+  { start: new Date('2024-11-01'), end: new Date('2024-11-13'), invoiceDate: new Date('2024-11-14'), chatterPayDate: new Date('2024-11-15') },
+  { start: new Date('2024-11-14'), end: new Date('2024-11-28'), invoiceDate: new Date('2024-11-29'), chatterPayDate: new Date('2024-11-30') },
+  { start: new Date('2024-11-29'), end: new Date('2024-12-13'), invoiceDate: new Date('2024-12-14'), chatterPayDate: new Date('2024-12-15') },
+  { start: new Date('2024-12-14'), end: new Date('2024-12-28'), invoiceDate: new Date('2024-12-29'), chatterPayDate: new Date('2024-12-30') },
+  { start: new Date('2024-12-29'), end: new Date('2025-01-13'), invoiceDate: new Date('2025-01-14'), chatterPayDate: new Date('2025-01-15') },
+  { start: new Date('2025-01-14'), end: new Date('2025-01-28'), invoiceDate: new Date('2025-01-29'), chatterPayDate: new Date('2025-01-30') },
+]
+
 export default function SalesTrackerForm() {
   const [formData, setFormData] = useState<FormData>(initialFormData)
+  const [currentPayPeriod, setCurrentPayPeriod] = useState<PayPeriod | null>(null)
   const router = useRouter()
+
+  useEffect(() => {
+    const now = new Date()
+    const currentPeriod = payPeriods.find(period => now >= period.start && now <= period.end)
+    setCurrentPayPeriod(currentPeriod || payPeriods[0]) // Default to first period if current date is not in any period
+  }, [])
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
     const { name, value } = e.target
@@ -58,6 +81,10 @@ export default function SalesTrackerForm() {
 
   const clearForm = () => {
     setFormData(initialFormData)
+  }
+
+  const formatDate = (date: Date) => {
+    return date.toISOString().split('T')[0]
   }
 
   return (
@@ -121,19 +148,27 @@ export default function SalesTrackerForm() {
 
         <div>
           <label htmlFor="date" className="block text-sm font-medium text-gray-700">
-            Date
+            Date <span className="text-red-500">*</span>
           </label>
           <div className="relative">
             <input
               type="date"
               id="date"
               name="date"
+              required
               value={formData.date}
               onChange={handleInputChange}
+              min={currentPayPeriod ? formatDate(currentPayPeriod.start) : undefined}
+              max={currentPayPeriod ? formatDate(currentPayPeriod.end) : undefined}
               className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-300 focus:ring focus:ring-indigo-200 focus:ring-opacity-50 pl-10"
             />
             <CalendarIcon className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" />
           </div>
+          {currentPayPeriod && (
+            <p className="mt-1 text-sm text-gray-500">
+              Current pay period: {formatDate(currentPayPeriod.start)} to {formatDate(currentPayPeriod.end)}
+            </p>
+          )}
         </div>
 
         <div>
@@ -175,14 +210,17 @@ export default function SalesTrackerForm() {
           <label htmlFor="wasItCover" className="block text-sm font-medium text-gray-700">
             Was It Cover?
           </label>
-          <input
-            type="text"
+          <select
             id="wasItCover"
             name="wasItCover"
             value={formData.wasItCover}
             onChange={handleInputChange}
             className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-300 focus:ring focus:ring-indigo-200 focus:ring-opacity-50"
-          />
+          >
+            <option value="">Select</option>
+            <option value="Yes">Yes</option>
+            <option value="No">No</option>
+          </select>
         </div>
 
         <div>

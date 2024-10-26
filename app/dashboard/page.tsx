@@ -3,15 +3,116 @@
 import React, { useState } from 'react'
 import { Bar, Doughnut } from 'react-chartjs-2'
 import { Chart as ChartJS, CategoryScale, LinearScale, BarElement, Title, Tooltip, Legend, ArcElement } from 'chart.js'
-import { ChevronDown, Home, DollarSign, FileText } from 'lucide-react'
+import { ArrowLeft, Bell, CalendarClock, ChevronDown, DollarSign, FileText, Home, Package2 } from 'lucide-react'
 import { motion, AnimatePresence } from 'framer-motion'
-import * as ScrollAreaPrimitive from '@radix-ui/react-scroll-area'
-import { cn } from "@/libs/utils"
 import Link from 'next/link'
+import { cn } from "@/libs/utils"
 
 ChartJS.register(CategoryScale, LinearScale, BarElement, Title, Tooltip, Legend, ArcElement)
 
-// Table components
+// Component definitions
+const Button = React.forwardRef<
+  HTMLButtonElement,
+  React.ButtonHTMLAttributes<HTMLButtonElement>
+>(({ className, ...props }, ref) => {
+  return (
+    <button
+      className={cn(
+        "inline-flex items-center justify-center rounded-md text-sm font-medium ring-offset-background transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50",
+        "bg-primary text-primary-foreground hover:bg-primary/90",
+        "h-10 px-4 py-2",
+        className
+      )}
+      ref={ref}
+      {...props}
+    />
+  )
+})
+Button.displayName = "Button"
+
+const Input = React.forwardRef<
+  HTMLInputElement,
+  React.InputHTMLAttributes<HTMLInputElement>
+>(({ className, type, ...props }, ref) => {
+  return (
+    <input
+      type={type}
+      className={cn(
+        "flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50",
+        className
+      )}
+      ref={ref}
+      {...props}
+    />
+  )
+})
+Input.displayName = "Input"
+
+const Label = React.forwardRef<
+  HTMLLabelElement,
+  React.LabelHTMLAttributes<HTMLLabelElement>
+>(({ className, ...props }, ref) => (
+  <label
+    ref={ref}
+    className={cn(
+      "text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70",
+      className
+    )}
+    {...props}
+  />
+))
+Label.displayName = "Label"
+
+const Card = React.forwardRef<
+  HTMLDivElement,
+  React.HTMLAttributes<HTMLDivElement>
+>(({ className, ...props }, ref) => (
+  <div
+    ref={ref}
+    className={cn(
+      "rounded-lg border bg-card text-card-foreground shadow-sm",
+      className
+    )}
+    {...props}
+  />
+))
+Card.displayName = "Card"
+
+const CardHeader = React.forwardRef<
+  HTMLDivElement,
+  React.HTMLAttributes<HTMLDivElement>
+>(({ className, ...props }, ref) => (
+  <div
+    ref={ref}
+    className={cn("flex flex-col space-y-1.5 p-6", className)}
+    {...props}
+  />
+))
+CardHeader.displayName = "CardHeader"
+
+const CardTitle = React.forwardRef<
+  HTMLParagraphElement,
+  React.HTMLAttributes<HTMLHeadingElement>
+>(({ className, ...props }, ref) => (
+  <h3
+    ref={ref}
+    className={cn(
+      "text-2xl font-semibold leading-none tracking-tight",
+      className
+    )}
+    {...props}
+  />
+))
+CardTitle.displayName = "CardTitle"
+
+const CardContent = React.forwardRef<
+  HTMLDivElement,
+  React.HTMLAttributes<HTMLDivElement>
+>(({ className, ...props }, ref) => (
+  <div ref={ref} className={cn("p-6 pt-0", className)} {...props} />
+))
+CardContent.displayName = "CardContent"
+
 const Table = React.forwardRef<
   HTMLTableElement,
   React.HTMLAttributes<HTMLTableElement>
@@ -86,156 +187,71 @@ const TableCell = React.forwardRef<
 ))
 TableCell.displayName = "TableCell"
 
-// Card components
-const Card = React.forwardRef<
+// Tabs components
+const Tabs = React.forwardRef<
   HTMLDivElement,
   React.HTMLAttributes<HTMLDivElement>
 >(({ className, ...props }, ref) => (
   <div
     ref={ref}
     className={cn(
-      "rounded-lg border bg-card text-card-foreground shadow-sm",
+      "inline-flex h-10 items-center justify-center rounded-md bg-muted p-1 text-muted-foreground",
       className
     )}
     {...props}
   />
 ))
-Card.displayName = "Card"
+Tabs.displayName = "Tabs"
 
-const CardHeader = React.forwardRef<
+const TabsList = React.forwardRef<
   HTMLDivElement,
   React.HTMLAttributes<HTMLDivElement>
 >(({ className, ...props }, ref) => (
   <div
     ref={ref}
-    className={cn("flex flex-col space-y-1.5 p-6", className)}
-    {...props}
-  />
-))
-CardHeader.displayName = "CardHeader"
-
-const CardTitle = React.forwardRef<
-  HTMLParagraphElement,
-  React.HTMLAttributes<HTMLHeadingElement>
->(({ className, ...props }, ref) => (
-  <h3
-    ref={ref}
     className={cn(
-      "text-2xl font-semibold leading-none tracking-tight",
+      "inline-flex h-9 items-center justify-center rounded-lg bg-muted p-1 text-muted-foreground",
       className
     )}
     {...props}
   />
 ))
-CardTitle.displayName = "CardTitle"
+TabsList.displayName = "TabsList"
 
-const CardContent = React.forwardRef<
-  HTMLDivElement,
-  React.HTMLAttributes<HTMLDivElement>
->(({ className, ...props }, ref) => (
-  <div ref={ref} className={cn("p-6 pt-0", className)} {...props} />
-))
-CardContent.displayName = "CardContent"
-
-// Input component
-const Input = React.forwardRef<
-  HTMLInputElement,
-  React.InputHTMLAttributes<HTMLInputElement>
->(({ className, type, ...props }, ref) => {
-  return (
-    <input
-      type={type}
-      className={cn(
-        "flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50",
-        className
-      )}
-      ref={ref}
-      {...props}
-    />
-  )
-})
-Input.displayName = "Input"
-
-// Button component
-const Button = React.forwardRef<
+const TabsTrigger = React.forwardRef<
   HTMLButtonElement,
   React.ButtonHTMLAttributes<HTMLButtonElement>
->(({ className, ...props }, ref) => {
-  return (
-    <button
-      className={cn(
-        "inline-flex items-center justify-center rounded-md text-sm font-medium ring-offset-background transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50",
-        "bg-primary text-primary-foreground hover:bg-primary/90",
-        "h-10 px-4 py-2",
-        className
-      )}
-      ref={ref}
-      {...props}
-    />
-  )
-})
-Button.displayName = "Button"
-
-// Label component
-const Label = React.forwardRef<
-  HTMLLabelElement,
-  React.LabelHTMLAttributes<HTMLLabelElement>
 >(({ className, ...props }, ref) => (
-  <label
+  <button
     ref={ref}
     className={cn(
-      "text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70",
+      "inline-flex items-center justify-center whitespace-nowrap rounded-md px-3 py-1.5 text-sm font-medium ring-offset-background transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 data-[state=active]:bg-background data-[state=active]:text-foreground data-[state=active]:shadow-sm",
       className
     )}
     {...props}
   />
 ))
-Label.displayName = "Label"
+TabsTrigger.displayName = "TabsTrigger"
 
-// ScrollArea components
-const ScrollArea = React.forwardRef<
-  React.ElementRef<typeof ScrollAreaPrimitive.Root>,
-  React.ComponentPropsWithoutRef<typeof ScrollAreaPrimitive.Root>
->(({ className, children, ...props }, ref) => (
-  <ScrollAreaPrimitive.Root
+const TabsContent = React.forwardRef<
+  HTMLDivElement,
+  React.HTMLAttributes<HTMLDivElement>
+>(({ className, ...props }, ref) => (
+  <div
     ref={ref}
-    className={cn("relative overflow-hidden", className)}
-    {...props}
-  >
-    <ScrollAreaPrimitive.Viewport className="h-full w-full rounded-[inherit]">
-      {children}
-    </ScrollAreaPrimitive.Viewport>
-    <ScrollBar />
-    <ScrollAreaPrimitive.Corner />
-  </ScrollAreaPrimitive.Root>
-))
-ScrollArea.displayName = ScrollAreaPrimitive.Root.displayName
-
-const ScrollBar = React.forwardRef<
-  React.ElementRef<typeof ScrollAreaPrimitive.ScrollAreaScrollbar>,
-  React.ComponentPropsWithoutRef<typeof ScrollAreaPrimitive.ScrollAreaScrollbar>
->(({ className, orientation = "vertical", ...props }, ref) => (
-  <ScrollAreaPrimitive.ScrollAreaScrollbar
-    ref={ref}
-    orientation={orientation}
     className={cn(
-      "flex touch-none select-none transition-colors",
-      orientation === "vertical" &&
-        "h-full w-2.5 border-l border-l-transparent p-[1px]",
-      orientation === "horizontal" &&
-        "h-2.5 border-t border-t-transparent p-[1px]",
+      "mt-2 ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2",
       className
     )}
     {...props}
-  >
-    <ScrollAreaPrimitive.ScrollAreaThumb className="relative flex-1 rounded-full bg-border" />
-  </ScrollAreaPrimitive.ScrollAreaScrollbar>
+  />
 ))
-ScrollBar.displayName = ScrollAreaPrimitive.ScrollAreaScrollbar.displayName
+TabsContent.displayName = "TabsContent"
 
-export default function Dashboard() {
+export default function FinancialDashboard() {
   const [openDropdown, setOpenDropdown] = useState<string | null>(null)
-  const [activeSubmenu, setActiveSubmenu] = useState<string | null>(null)
+  const [activeView, setActiveView] = useState<'dashboard' | 'dataInput'>('dashboard')
+  const [activeTab, setActiveTab] = useState('general')
   const [financialData, setFinancialData] = useState({
     income: 0,
     expenses: 0,
@@ -260,32 +276,23 @@ export default function Dashboard() {
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>, category: string, index?: number, subCategory?: string) => {
     const { name, value } = e.target
     setFinancialData(prevData => {
+      let newData = { ...prevData }
       if (category === 'monthlyIncome') {
-        const newMonthlyIncome = [...prevData.monthlyIncome]
-        newMonthlyIncome[index!] = parseFloat(value) || 0
-        return { ...prevData, monthlyIncome: newMonthlyIncome }
+        newData.monthlyIncome[index!] = parseFloat(value) || 0
       } else if (category === 'quarterlyIncome') {
-        const newQuarterlyIncome = [...prevData.quarterlyIncome]
-        newQuarterlyIncome[index!] = parseFloat(value) || 0
-        return { ...prevData, quarterlyIncome: newQuarterlyIncome }
+        newData.quarterlyIncome[index!] = parseFloat(value) || 0
       } else if (category === 'clients' || category === 'payroll') {
-        const newArray = [...prevData[category]]
-        newArray[index!] = { ...newArray[index!], [subCategory!]: value }
-        return { ...prevData, [category]: newArray }
+        newData[category][index!] = { ...newData[category][index!], [subCategory!]: value }
       } else {
-        return { ...prevData, [name]: parseFloat(value) || 0 }
+        newData[name as keyof typeof newData] = parseFloat(value) || 0
       }
+      
+      // Automatically calculate derived values
+      newData.netProfit = newData.income - newData.expenses
+      newData.grossProfitMargin = newData.income !== 0 ? (newData.netProfit / newData.income) * 100 : 0
+      
+      return newData
     })
-  }
-
-  const calculateFinances = () => {
-    const netProfit = financialData.income - financialData.expenses
-    const grossProfitMargin = financialData.income !== 0 ? (netProfit / financialData.income) * 100 : 0
-    setFinancialData(prevData => ({
-      ...prevData,
-      netProfit,
-      grossProfitMargin
-    }))
   }
 
   const incomeVsExpensesData = {
@@ -308,11 +315,10 @@ export default function Dashboard() {
 
   const toggleDropdown = (dropdown: string) => {
     setOpenDropdown(openDropdown === dropdown ? null : dropdown)
-    setActiveSubmenu(null)
   }
 
-  const toggleSubmenu = (submenu: string) => {
-    setActiveSubmenu(activeSubmenu === submenu ? null : submenu)
+  const toggleView = (view: 'dashboard' | 'dataInput') => {
+    setActiveView(view)
   }
 
   return (
@@ -326,30 +332,35 @@ export default function Dashboard() {
       >
         <h1 className="text-2xl font-bold mb-6">Connect Chatting LLC</h1>
         <nav className="space-y-2">
-          <Link href="/dashboard" passHref>
-            <motion.a
-              whileHover={{ scale: 1.05 }}
-              whileTap={{ scale: 0.95 }}
-              className="flex items-center w-full py-2 px-4 rounded hover:bg-gray-700"
-            >
-              <Home className="mr-2" size={18} /> Home
-            </motion.a>
-          </Link>
+          <motion.button
+            whileHover={{ scale: 1.05 }}
+            whileTap={{ scale: 0.95 }}
+            className="flex items-center w-full py-2 px-4 rounded hover:bg-gray-700"
+            onClick={() => toggleView('dashboard')}
+          >
+            <Home className="mr-2" size={18} /> Dashboard
+          </motion.button>
+          <motion.button
+            whileHover={{ scale: 1.05 }}
+            whileTap={{ scale: 0.95 }}
+            className="flex items-center w-full py-2 px-4 rounded hover:bg-gray-700"
+            onClick={() => toggleView('dataInput')}
+          >
+            <FileText className="mr-2" size={18} /> Data Input
+          </motion.button>
           <div>
-            <Link href="/sales-data" passHref>
-              <motion.a
-                className="flex items-center justify-between w-full py-2 px-4 rounded hover:bg-gray-700"
-                onClick={() => toggleDropdown('salesData')}
+            <motion.button
+              className="flex items-center justify-between w-full py-2 px-4 rounded hover:bg-gray-700"
+              onClick={() => toggleDropdown('salesData')}
+            >
+              <span className="flex items-center"><DollarSign className="mr-2" size={18} /> Sales Data</span>
+              <motion.div
+                animate={{ rotate: openDropdown === 'salesData' ? 180 : 0 }}
+                transition={{ duration: 0.3 }}
               >
-                <span className="flex items-center"><DollarSign className="mr-2" size={18} /> Sales Data</span>
-                <motion.div
-                  animate={{ rotate: openDropdown === 'salesData' ? 180 : 0 }}
-                  transition={{ duration: 0.3 }}
-                >
-                  <ChevronDown size={18} />
-                </motion.div>
-              </motion.a>
-            </Link>
+                <ChevronDown size={18} />
+              </motion.div>
+            </motion.button>
             <AnimatePresence>
               {openDropdown === 'salesData' && (
                 <motion.div
@@ -369,41 +380,15 @@ export default function Dashboard() {
               )}
             </AnimatePresence>
           </div>
-          <Link href="/sales" passHref>
-            <motion.a
-              whileHover={{ scale: 1.05 }}
-              whileTap={{ scale: 0.95 }}
-              className="flex items-center w-full py-2 px-4 rounded hover:bg-gray-700"
-            >
-              <DollarSign className="mr-2" size={18} /> Sales
-            </motion.a>
-          </Link>
-          <Link href="/invoice" passHref>
-            <motion.a
-              whileHover={{ scale: 1.05 }}
-              whileTap={{ scale: 0.95 }}
-              className="flex items-center w-full py-2 px-4 rounded hover:bg-gray-700"
-            >
-              <FileText className="mr-2" size={18} /> Invoice Creator
-            </motion.a>
-          </Link>
-          <Link href="/another-page" passHref>
-            <motion.a
-              whileHover={{ scale: 1.05 }}
-              whileTap={{ scale: 0.95 }}
-              className="flex items-center w-full py-2 px-4 rounded hover:bg-gray-700"
-            >
-              <FileText className="mr-2" size={18} /> Another Page
-            </motion.a>
-          </Link>
         </nav>
+      
       </motion.div>
 
       {/* Main Content */}
       <motion.div
-        initial={{ opacity: 0}}
-        animate={{opacity: 1}}
-        transition={{duration: 0.5}}
+        initial={{ opacity: 0 }}
+        animate={{ opacity: 1 }}
+        transition={{ duration: 0.5 }}
         className="flex-1 p-8 overflow-auto"
       >
         <div className="max-w-7xl mx-auto">
@@ -413,96 +398,128 @@ export default function Dashboard() {
             transition={{ duration: 0.5 }}
             className="text-2xl font-bold mb-6"
           >
-            Financial Dashboard
+            {activeView === 'dashboard' ? 'Financial Dashboard' : 'Data Input'}
           </motion.h2>
           
-          {activeSubmenu === 'dataInput' ? (
+          {activeView === 'dataInput' ? (
             <Card>
               <CardHeader>
                 <CardTitle>Financial Data Input</CardTitle>
               </CardHeader>
               <CardContent>
-                <ScrollArea className="h-[calc(100vh-200px)] pr-4">
-                  <div className="space-y-4">
-                    <div>
-                      <h4 className="font-semibold mb-2">General Financial Data</h4>
-                      <div className="grid grid-cols-2 gap-4">
-                        <div>
-                          <Label htmlFor="income">Income</Label>
-                          <Input
-                            id="income"
-                            type="number"
-                            name="income"
-                            value={financialData.income || ''}
-                            onChange={(e) => handleInputChange(e, 'income')}
-                          />
+                <Tabs className="w-full">
+                  <TabsList className="grid w-full grid-cols-4">
+                    <TabsTrigger
+                      value="general"
+                      onClick={() => setActiveTab('general')}
+                      data-state={activeTab === 'general' ? 'active' : ''}
+                    >
+                      General
+                    </TabsTrigger>
+                    <TabsTrigger
+                      value="income"
+                      onClick={() => setActiveTab('income')}
+                      data-state={activeTab === 'income' ? 'active' : ''}
+                    >
+                      Income
+                    </TabsTrigger>
+                    <TabsTrigger
+                      value="payroll"
+                      onClick={() => setActiveTab('payroll')}
+                      data-state={activeTab === 'payroll' ? 'active' : ''}
+                    >
+                      Payroll
+                    </TabsTrigger>
+                    <TabsTrigger
+                      value="clients"
+                      onClick={() => setActiveTab('clients')}
+                      data-state={activeTab === 'clients' ? 'active' : ''}
+                    >
+                      Clients
+                    </TabsTrigger>
+                  </TabsList>
+                  <TabsContent value="general" hidden={activeTab !== 'general'}>
+                    <div className="grid grid-cols-2 gap-4">
+                      <div>
+                        <Label htmlFor="income">Income</Label>
+                        <Input
+                          id="income"
+                          type="number"
+                          name="income"
+                          value={financialData.income || ''}
+                          onChange={(e) => handleInputChange(e, 'income')}
+                        />
+                      </div>
+                      <div>
+                        <Label htmlFor="expenses">Expenses</Label>
+                        <Input
+                          id="expenses"
+                          type="number"
+                          name="expenses"
+                          value={financialData.expenses || ''}
+                          onChange={(e) => handleInputChange(e, 'expenses')}
+                        />
+                      </div>
+                      <div>
+                        <Label htmlFor="cashInflows">Cash Inflows</Label>
+                        <Input
+                          id="cashInflows"
+                          type="number"
+                          name="cashInflows"
+                          value={financialData.cashInflows || ''}
+                          onChange={(e) => handleInputChange(e, 'cashInflows')}
+                        />
+                      </div>
+                      <div>
+                        <Label htmlFor="cashToHand">Cash To Hand</Label>
+                        <Input
+                          id="cashToHand"
+                          type="number"
+                          name="cashToHand"
+                          value={financialData.cashToHand || ''}
+                          onChange={(e) => handleInputChange(e, 'cashToHand')}
+                        />
+                      </div>
+                    </div>
+                  </TabsContent>
+                  <TabsContent value="income" hidden={activeTab !== 'income'}>
+                    <div className="space-y-4">
+                      <div>
+                        <h4 className="font-semibold mb-2">Monthly Income</h4>
+                        <div className="grid grid-cols-3 gap-4">
+                          {['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun'].map((month, index) => (
+                            <div key={month}>
+                              <Label htmlFor={`month-${index}`}>{month}</Label>
+                              <Input
+                                id={`month-${index}`}
+                                type="number"
+                                value={financialData.monthlyIncome[index] || ''}
+                                onChange={(e) => handleInputChange(e, 'monthlyIncome', index)}
+                              />
+                            </div>
+                          ))}
                         </div>
-                        <div>
-                          <Label htmlFor="expenses">Expenses</Label>
-                          <Input
-                            id="expenses"
-                            type="number"
-                            name="expenses"
-                            value={financialData.expenses || ''}
-                            onChange={(e) => handleInputChange(e, 'expenses')}
-                          />
-                        </div>
-                        <div>
-                          <Label htmlFor="cashInflows">Cash Inflows</Label>
-                          <Input
-                            id="cashInflows"
-                            type="number"
-                            name="cashInflows"
-                            value={financialData.cashInflows || ''}
-                            onChange={(e) => handleInputChange(e, 'cashInflows')}
-                          />
-                        </div>
-                        <div>
-                          <Label htmlFor="cashToHand">Cash To Hand</Label>
-                          <Input
-                            id="cashToHand"
-                            type="number"
-                            name="cashToHand"
-                            value={financialData.cashToHand || ''}
-                            onChange={(e) => handleInputChange(e, 'cashToHand')}
-                          />
+                      </div>
+                      <div>
+                        <h4 className="font-semibold mb-2">Quarterly Income</h4>
+                        <div className="grid grid-cols-2 gap-4">
+                          {['Q1', 'Q2'].map((quarter, index) => (
+                            <div key={quarter}>
+                              <Label htmlFor={`quarter-${index}`}>{quarter}</Label>
+                              <Input
+                                id={`quarter-${index}`}
+                                type="number"
+                                value={financialData.quarterlyIncome[index] || ''}
+                                onChange={(e) => handleInputChange(e, 'quarterlyIncome', index)}
+                              />
+                            </div>
+                          ))}
                         </div>
                       </div>
                     </div>
-                    <div>
-                      <h4 className="font-semibold mb-2">Monthly Income</h4>
-                      <div className="grid grid-cols-3 gap-4">
-                        {['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun'].map((month, index) => (
-                          <div key={month}>
-                            <Label htmlFor={`month-${index}`}>{month}</Label>
-                            <Input
-                              id={`month-${index}`}
-                              type="number"
-                              value={financialData.monthlyIncome[index] || ''}
-                              onChange={(e) => handleInputChange(e, 'monthlyIncome', index)}
-                            />
-                          </div>
-                        ))}
-                      </div>
-                    </div>
-                    <div>
-                      <h4 className="font-semibold mb-2">Quarterly Income</h4>
-                      <div className="grid grid-cols-2 gap-4">
-                        {['Q1', 'Q2'].map((quarter, index) => (
-                          <div key={quarter}>
-                            <Label htmlFor={`quarter-${index}`}>{quarter}</Label>
-                            <Input
-                              id={`quarter-${index}`}
-                              type="number"
-                              value={financialData.quarterlyIncome[index] || ''}
-                              onChange={(e) => handleInputChange(e, 'quarterlyIncome', index)}
-                            />
-                          </div>
-                        ))}
-                      </div>
-                    </div>
-                    <div>
-                      <h4 className="font-semibold mb-2">Payroll</h4>
+                  </TabsContent>
+                  <TabsContent value="payroll" hidden={activeTab !== 'payroll'}>
+                    <div className="space-y-4">
                       {financialData.payroll.map((item, index) => (
                         <div key={index} className="grid grid-cols-3 gap-4 mb-2">
                           <div>
@@ -535,8 +552,9 @@ export default function Dashboard() {
                         </div>
                       ))}
                     </div>
-                    <div>
-                      <h4 className="font-semibold mb-2">Client Invoices</h4>
+                  </TabsContent>
+                  <TabsContent value="clients" hidden={activeTab !== 'clients'}>
+                    <div className="space-y-4">
                       {financialData.clients.map((client, index) => (
                         <div key={index} className="grid grid-cols-3 gap-4 mb-2">
                           <div>
@@ -569,9 +587,11 @@ export default function Dashboard() {
                         </div>
                       ))}
                     </div>
-                    <Button onClick={calculateFinances}>Update Dashboard</Button>
-                  </div>
-                </ScrollArea>
+                  </TabsContent>
+                </Tabs>
+                <div className="mt-6">
+                  <Button onClick={() => toggleView('dashboard')}>View Dashboard</Button>
+                </div>
               </CardContent>
             </Card>
           ) : (

@@ -1,9 +1,9 @@
 'use client'
 
-import React, { useEffect, useState, ReactNode } from 'react'
+import React, { useEffect, useState } from 'react'
 import Link from 'next/link'
 import { motion, AnimatePresence } from 'framer-motion'
-import { ChevronDown, ChevronRight, Menu, X, Home, Zap, ChartBar, DollarSign, FileText } from 'lucide-react'
+import { ChevronDown, ChevronRight, Menu, X, Home, Zap, ChartBar, DollarSign, FileText, Edit2, Save } from 'lucide-react'
 
 interface FormData {
   email: string
@@ -12,16 +12,31 @@ interface FormData {
   date: string
   modelsWorkedOn: string
   shiftTime: string
-  wasItCover: boolean
+  wasItCover: string
   whoCovered: string
   totalNetSale: string
   pay?: number
+  payPercentage: number
 }
 
 interface ChatterGroup {
   chatterName: string
   totalPay: number
   entries: FormData[]
+  payPercentage: number
+}
+
+interface PayPeriod {
+  start: string
+  end: string
+  invoiceDate: string
+  chatterPayDate: string
+}
+
+interface PayPeriodGroup {
+  payPeriod: PayPeriod
+  chatterGroups: ChatterGroup[]
+  totalPay: number
 }
 
 interface ButtonProps extends React.ButtonHTMLAttributes<HTMLButtonElement> {
@@ -169,18 +184,30 @@ const Sidebar = ({ isOpen, setIsOpen }: { isOpen: boolean; setIsOpen: (isOpen: b
   )
 }
 
+const payPeriods: PayPeriod[] = [
+  { start: 'November 1, 2024', end: 'November 13, 2024', invoiceDate: 'November 14, 2024', chatterPayDate: 'November 15, 2024' },
+  { start: 'November 14, 2024', end: 'November 28, 2024', invoiceDate: 'November 29, 2024', chatterPayDate: 'November 30, 2024' },
+  { start: 'November 29, 2024', end: 'December 13, 2024', invoiceDate: 'December 14, 2024', chatterPayDate: 'December 15, 2024' },
+  { start: 'December 14, 2024', end: 'December 28, 2024', invoiceDate: 'December 29, 2024', chatterPayDate: 'December 30, 2024' },
+  { start: 'December 29, 2024', end: 'January 13, 2025', invoiceDate: 'January 14, 2025', chatterPayDate: 'January 15, 2025' },
+  { start: 'January 14, 2025', end: 'January 28, 2025', invoiceDate: 'January 29, 2025', chatterPayDate: 'January 30, 2025' },
+]
+
 export default function SalesDashboard() {
-  const [chatterGroups, setChatterGroups] = useState<ChatterGroup[]>([])
+  const [payPeriodGroups, setPayPeriodGroups] = useState<PayPeriodGroup[]>([])
   const [isLoading, setIsLoading] = useState(true)
+  const [expandedPayPeriod, setExpandedPayPeriod] = useState<string | null>(null)
   const [expandedChatter, setExpandedChatter] = useState<string | null>(null)
   const [isSidebarOpen, setIsSidebarOpen] = useState(false)
+  const [editingChatter, setEditingChatter] = useState<string | null>(null)
+  const [editedPercentage, setEditedPercentage] = useState<number>(0)
 
   useEffect(() => {
     const handleResize = () => {
       setIsSidebarOpen(window.innerWidth >= 768)
     }
 
-    handleResize() // Set initial state
+    handleResize()
     window.addEventListener('resize', handleResize)
 
     return () => window.removeEventListener('resize', handleResize)
@@ -188,28 +215,75 @@ export default function SalesDashboard() {
 
   useEffect(() => {
     const data: FormData[] = JSON.parse(localStorage.getItem('chatterData') || '[]')
-    const groupedData: ChatterGroup[] = data.reduce((acc: ChatterGroup[], item: FormData) => {
-      const pay = parseFloat(item.totalNetSale) * 0.07
-      const itemWithPay = { ...item, pay }
+    const groupedData: PayPeriodGroup[] = payPeriods.map(payPeriod => {
+      const periodEntries = data.filter(entry => {
+        const entryDate = new Date(entry.date)
+        return entryDate >= new Date(payPeriod.start) && entryDate <= new Date(payPeriod.end)
+      })
 
-      let group = acc.find(g => g.chatterName === item.chatterName)
-      if (!group) {
-        group = { chatterName: item.chatterName, totalPay: 0, entries: [] }
-        acc.push(group)
-      }
+      const chatterGroups: ChatterGroup[] = periodEntries.reduce((acc: ChatterGroup[], item: FormData) => {
+        const payPercentage = item.payPercentage || 7 // Default to 7% if not set
+        const pay = parseFloat(item.totalNetSale) * (payPercentage / 100)
+        const itemWithPay = { ...item, pay, payPercentage }
 
-      group.totalPay += pay
-      group.entries.push(itemWithPay)
+        let group = acc.find(g => g.chatterName === item.chatterName)
+        if (!group) {
+          group = { chatterName: item.chatterName, totalPay: 0, entries: [], payPercentage }
+          acc.push(group)
+        }
 
-      return acc
-    }, [])
+        group.totalPay += pay
+        group.entries.push(itemWithPay)
 
-    setChatterGroups(groupedData)
+        return acc
+      }, [])
+
+      const totalPay = chatterGroups.reduce((sum, group) => sum + group.totalPay, 0)
+
+      return { payPeriod, chatterGroups, totalPay }
+    })
+
+    setPayPeriodGroups(groupedData)
     setIsLoading(false)
   }, [])
 
-  const toggleChatter = (chatterName: string) => {
-    setExpandedChatter(expandedChatter === chatterName ? null : chatterName)
+  const togglePayPeriod = (payPeriodStart: string) => {
+    setExpandedPayPeriod(expandedPayPeriod === payPeriodStart ? null : payPeriodStart)
+  }
+
+  const toggleChatter = (payPeriodStart: string, chatterName: string) => {
+    const key = `${payPeriodStart}-${chatterName}`
+    setExpandedChatter(expandedChatter === key ? null : key)
+  }
+
+  const startEditing = (payPeriodStart: string, chatterName: string, currentPercentage: number) => {
+    setEditingChatter(`${payPeriodStart}-${chatterName}`)
+    setEditedPercentage(currentPercentage)
+  }
+
+  const saveEditedPercentage = (payPeriodStart: string, chatterName: string) => {
+    setPayPeriodGroups(prevGroups => {
+      return prevGroups.map(group => {
+        if (group.payPeriod.start === payPeriodStart) {
+          const updatedChatterGroups = group.chatterGroups.map(chatter => {
+            if (chatter.chatterName === chatterName) {
+              const updatedEntries = chatter.entries.map(entry => ({
+                ...entry,
+                payPercentage: editedPercentage,
+                pay: parseFloat(entry.totalNetSale) * (editedPercentage / 100)
+              }))
+              const totalPay = updatedEntries.reduce((sum, entry) => sum + (entry.pay || 0), 0)
+              return { ...chatter, entries: updatedEntries, totalPay, payPercentage: editedPercentage }
+            }
+            return chatter
+          })
+          const totalPay = updatedChatterGroups.reduce((sum, chatter) => sum + chatter.totalPay, 0)
+          return { ...group, chatterGroups: updatedChatterGroups, totalPay }
+        }
+        return group
+      })
+    })
+    setEditingChatter(null)
   }
 
   if (isLoading) {
@@ -238,89 +312,111 @@ export default function SalesDashboard() {
         <main className="flex-1 overflow-x-hidden overflow-y-auto bg-gray-100">
           <div className="container mx-auto px-4 sm:px-6 lg:px-8 py-8">
             <ScrollArea className="h-[calc(100vh-8rem)] pr-4">
-              <div className="bg-white shadow overflow-hidden sm:rounded-lg">
-                <table className="min-w-full divide-y divide-gray-200">
-                  <thead className="bg-gray-50">
-                    <tr>
-                      <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                        Chatter Name
-                      </th>
-                      <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                        Total Pay
-                      </th>
-                      <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                        Details
-                      </th>
-                    </tr>
-                  </thead>
-                  <tbody className="bg-white divide-y divide-gray-200">
-                    {chatterGroups.map((group) => (
-                      <React.Fragment key={group.chatterName}>
-                        <tr>
-                          <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
-                            {group.chatterName}
-                          </td>
-                          <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                            ${group.totalPay.toFixed(2)}
-                          </td>
-                          <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                            <Button
-                              variant="ghost"
-                              onClick={() => toggleChatter(group.chatterName)}
-                              className="text-blue-600 hover:text-blue-900"
-                            >
-                              {expandedChatter === group.chatterName ? (
-                                <ChevronDown className="h-5 w-5 inline mr-1" />
+              {payPeriodGroups.map((group) => (
+                <div key={group.payPeriod.start} 
+                     className="mb-8 bg-white shadow overflow-hidden sm:rounded-lg">
+                  <div className="px-4 py-5 sm:px-6 flex justify-between items-center cursor-pointer"
+                       onClick={() => togglePayPeriod(group.payPeriod.start)}>
+                    <h3 className="text-lg leading-6 font-medium text-gray-900">
+                      Pay Period: {group.payPeriod.start} to {group.payPeriod.end}
+                    </h3>
+                    <div className="flex items-center">
+                      <span className="mr-2 text-sm text-gray-500">Total Pay: ${group.totalPay.toFixed(2)}</span>
+                      <ChevronDown
+                        className={`h-5 w-5 text-gray-500 transform transition-transform ${
+                          expandedPayPeriod === group.payPeriod.start ? 'rotate-180' : ''
+                        }`}
+                      />
+                    </div>
+                  </div>
+                  {expandedPayPeriod === group.payPeriod.start && (
+                    <div className="border-t border-gray-200">
+                      {group.chatterGroups.map((chatterGroup) => (
+                        <div key={chatterGroup.chatterName} className="border-b border-gray-200 last:border-b-0">
+                          <div
+                            className="px-4 py-4 sm:px-6 flex justify-between items-center cursor-pointer hover:bg-gray-50"
+                            onClick={() => toggleChatter(group.payPeriod.start, chatterGroup.chatterName)}
+                          >
+                            <p className="text-sm font-medium text-indigo-600 truncate">{chatterGroup.chatterName}</p>
+                            <div className="flex items-center">
+                              <span className="mr-2 text-sm text-gray-500">
+                                Total Pay: ${chatterGroup.totalPay.toFixed(2)} ({chatterGroup.payPercentage}%)
+                              </span>
+                              {editingChatter === `${group.payPeriod.start}-${chatterGroup.chatterName}` ? (
+                                <>
+                                  <input
+                                    type="number"
+                                    value={editedPercentage}
+                                    onChange={(e) => setEditedPercentage(Number(e.target.value))}
+                                    className="w-16 px-2 py-1 text-sm border rounded mr-2"
+                                  />
+                                  <Button
+                                    variant="outline"
+                                    size="sm"
+                                    onClick={(e) => {
+                                      e.stopPropagation()
+                                      saveEditedPercentage(group.payPeriod.start, chatterGroup.chatterName)
+                                    }}
+                                  >
+                                    <Save className="h-4 w-4" />
+                                  </Button>
+                                </>
                               ) : (
-                                <ChevronRight className="h-5 w-5 inline mr-1" />
+                                <Button
+                                  variant="outline"
+                                  size="sm"
+                                  onClick={(e) => {
+                                    e.stopPropagation()
+                                    startEditing(group.payPeriod.start, chatterGroup.chatterName, chatterGroup.payPercentage)
+                                  }}
+                                >
+                                  <Edit2 className="h-4 w-4" />
+                                </Button>
                               )}
-                              {expandedChatter === group.chatterName ? 'Hide' : 'Show'} Details
-                            </Button>
-                          </td>
-                        </tr>
-                        {expandedChatter === group.chatterName && (
-                          <tr>
-                            <td colSpan={3} className="px-6 py-4">
-                              <div className="overflow-x-auto">
-                                <table className="min-w-full divide-y divide-gray-200">
-                                  <thead className="bg-gray-100">
-                                    <tr>
-                                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Date</th>
-                                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Email</th>
-                                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Timezone</th>
-                                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Models Worked On</th>
-                                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Shift Time</th>
-                                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Was It Cover?</th>
-                                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Who Covered</th>
-                                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Total Net Sale</th>
-                                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Pay (7%)</th>
+                              <ChevronDown
+                                className={`h-5 w-5 text-gray-500 transform transition-transform ${
+                                  expandedChatter === `${group.payPeriod.start}-${chatterGroup.chatterName}` ? 'rotate-180' : ''
+                                }`}
+                              />
+                            </div>
+                          </div>
+                          
+                          {expandedChatter === `${group.payPeriod.start}-${chatterGroup.chatterName}` && (
+                            <div className="px-4 py-4 sm:px-6 bg-gray-50">
+                              <table className="min-w-full divide-y divide-gray-200">
+                                <thead className="bg-gray-50">
+                                  <tr>
+                                    <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Date</th>
+                                    <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Models Worked On</th>
+                                    <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Shift Time</th>
+                                    <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Was It Cover</th>
+                                    <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Who Covered</th>
+                                    <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Total Net Sale</th>
+                                    <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Pay ({chatterGroup.payPercentage}%)</th>
+                                  </tr>
+                                </thead>
+                                <tbody className="bg-white divide-y divide-gray-200">
+                                  {chatterGroup.entries.map((entry, index) => (
+                                    <tr key={index}>
+                                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{entry.date}</td>
+                                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{entry.modelsWorkedOn}</td>
+                                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{entry.shiftTime}</td>
+                                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{entry.wasItCover}</td>
+                                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{entry.whoCovered}</td>
+                                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">${entry.totalNetSale}</td>
+                                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">${entry.pay?.toFixed(2)}</td>
                                     </tr>
-                                  </thead>
-                                  <tbody className="bg-white divide-y divide-gray-200">
-                                    {group.entries.map((entry, index) => (
-                                      <tr key={index}>
-                                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{entry.date}</td>
-                                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{entry.email}</td>
-                                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{entry.timezone}</td>
-                                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{entry.modelsWorkedOn}</td>
-                                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{entry.shiftTime}</td>
-                                        <td className="px-6 py-4  whitespace-nowrap text-sm text-gray-500">{entry.wasItCover ? 'Yes' : 'No'}</td>
-                                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{entry.whoCovered}</td>
-                                        <td className="px-6 py-4 whitespace-nowrap  text-sm text-gray-500">${entry.totalNetSale}</td>
-                                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">${entry.pay?.toFixed(2)}</td>
-                                      </tr>
-                                    ))}
-                                  </tbody>
-                                </table>
-                              </div>
-                            </td>
-                          </tr>
-                        )}
-                      </React.Fragment>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
+                                  ))}
+                                </tbody>
+                              </table>
+                            </div>
+                          )}
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              ))}
             </ScrollArea>
           </div>
         </main>

@@ -1,7 +1,7 @@
 'use client'
 
 import React, { useState, useEffect, useMemo } from 'react'
-import { ChevronDown, ChevronRight, Menu, X, Home, Rocket, Lightbulb, Map, Target, ClipboardCheck, Zap, ChartBar, DollarSign, FileText } from 'lucide-react'
+import { ChevronDown, Menu, Zap, ChartBar, DollarSign, FileText, Home, RefreshCw } from 'lucide-react'
 import Link from 'next/link'
 import { format, addDays, startOfDay, isBefore, isAfter, isSameDay, parseISO } from 'date-fns'
 import { motion, AnimatePresence } from 'framer-motion'
@@ -15,7 +15,8 @@ interface SalesData {
 interface PayPeriod {
   startDate: Date
   endDate: Date
-  salaryDate: Date
+  invoiceDate: Date
+  chatterPayDate: Date
   status: 'Chatters Paid' | 'Active Pay Period' | 'Inactive Pay Period'
   totalPayout: number
 }
@@ -54,7 +55,7 @@ const menuItems = [
   { name: 'Home', icon: Home, hasDropdown: false },
   { name: 'Sales Data', icon: ChartBar, hasDropdown: true, submenu: [
     { name: 'Form', url: '/form' },
-    { name: 'Pay Period', url: 'pay-periods' },
+    { name: 'Pay Period', url: '/pay-periods' },
   ]},
   { name: 'Sales', icon: DollarSign, hasDropdown: false, url: '/sales' },
   { name: 'Invoice Creator', icon: FileText, hasDropdown: false, url: '/invoice' },
@@ -159,28 +160,59 @@ export default function CombinedDashboard() {
   const [isSidebarOpen, setIsSidebarOpen] = useState(false)
 
   const generatePayPeriods = useMemo(() => {
-    const periods: PayPeriod[] = []
-    let startDate = startOfDay(parseISO(currentDate))
-    startDate = addDays(startDate, -70) // Start 10 weeks before current date
-
-    for (let i = 0; i < 6; i++) {
-      const periodStart = new Date(startDate)
-      const periodEnd = addDays(periodStart, 13) // 14 day period
-      const salaryDate = addDays(periodEnd, 14) // Salary date is 14 days after period end
-
-      periods.push({
-        startDate: periodStart,
-        endDate: periodEnd,
-        salaryDate: salaryDate,
+    const periods: PayPeriod[] = [
+      {
+        startDate: new Date('2024-11-01'),
+        endDate: new Date('2024-11-13'),
+        invoiceDate: new Date('2024-11-14'),
+        chatterPayDate: new Date('2024-11-15'),
         status: 'Inactive Pay Period',
         totalPayout: 0
-      })
-
-      startDate = addDays(startDate, 14) // Move to next period
-    }
+      },
+      {
+        startDate: new Date('2024-11-14'),
+        endDate: new Date('2024-11-28'),
+        invoiceDate: new Date('2024-11-29'),
+        chatterPayDate: new Date('2024-11-30'),
+        status: 'Inactive Pay Period',
+        totalPayout: 0
+      },
+      {
+        startDate: new Date('2024-11-29'),
+        endDate: new Date('2024-12-13'),
+        invoiceDate: new Date('2024-12-14'),
+        chatterPayDate: new Date('2024-12-15'),
+        status: 'Inactive Pay Period',
+        totalPayout: 0
+      },
+      {
+        startDate: new Date('2024-12-14'),
+        endDate: new Date('2024-12-28'),
+        invoiceDate: new Date('2024-12-29'),
+        chatterPayDate: new Date('2024-12-30'),
+        status: 'Inactive Pay Period',
+        totalPayout: 0
+      },
+      {
+        startDate: new Date('2024-12-29'),
+        endDate: new Date('2025-01-13'),
+        invoiceDate: new Date('2025-01-14'),
+        chatterPayDate: new Date('2025-01-15'),
+        status: 'Inactive Pay Period',
+        totalPayout: 0
+      },
+      {
+        startDate: new Date('2025-01-14'),
+        endDate: new Date('2025-01-28'),
+        invoiceDate: new Date('2025-01-29'),
+        chatterPayDate: new Date('2025-01-30'),
+        status: 'Inactive Pay Period',
+        totalPayout: 0
+      }
+    ]
 
     return periods
-  }, [currentDate])
+  }, [])
 
   useEffect(() => {
     // Fetch sales data from localStorage
@@ -233,9 +265,17 @@ export default function CombinedDashboard() {
     return () => window.removeEventListener('resize', handleResize)
   }, [])
 
-  // Function to format date as "MMM D"
+  // Function to format date as "MMM D, YYYY"
   const formatDate = (date: Date) => {
-    return format(date, 'MMM d')
+    return format(date, 'MMM d, yyyy')
+  }
+
+  const resetPayoutData = () => {
+    const resetPayPeriods = payPeriods.map(period => ({
+      ...period,
+      totalPayout: 0
+    }))
+    setPayPeriods(resetPayPeriods)
   }
 
   return (
@@ -268,23 +308,33 @@ export default function CombinedDashboard() {
                 View Sales Data
               </Link>
             </div>
-            <div className="mb-4">
-              <label htmlFor="currentDate" className="block text-sm font-medium text-gray-700">Current Date (for testing):</label>
-              <input
-                type="date"
-                id="currentDate"
-                value={currentDate}
-                onChange={(e) => setCurrentDate(e.target.value)}
-                className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-300 focus:ring focus:ring-indigo-200 focus:ring-opacity-50"
-              />
+            <div className="mb-4 flex items-center justify-between">
+              <div>
+                <label htmlFor="currentDate" className="block text-sm font-medium text-gray-700">Current Date (for testing):</label>
+                <input
+                  type="date"
+                  id="currentDate"
+                  value={currentDate}
+                  onChange={(e) => setCurrentDate(e.target.value)}
+                  className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-300 focus:ring focus:ring-indigo-200 focus:ring-opacity-50"
+                />
+              </div>
+              <Button
+                onClick={resetPayoutData}
+                className="flex items-center space-x-2 bg-red-500 hover:bg-red-600 text-white"
+              >
+                <RefreshCw className="h-4 w-4" />
+                <span>Reset Payout Data</span>
+              </Button>
             </div>
             <div className="overflow-x-auto">
               <table className="min-w-full divide-y divide-gray-200">
                 <thead className="bg-gray-50">
                   <tr>
                     <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Pay Period</th>
-                    <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Salary Date</th>
-                    <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
+                    <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Invoice Date</th>
+                    <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Chatter Pay Date</th>
+                    <th  scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
                     <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Total Chatter Payout</th>
                   </tr>
                 </thead>
@@ -295,7 +345,10 @@ export default function CombinedDashboard() {
                         {formatDate(period.startDate)} - {formatDate(period.endDate)}
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                        {formatDate(period.salaryDate)}
+                        {formatDate(period.invoiceDate)}
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                        {formatDate(period.chatterPayDate)}
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
                         <div className="relative inline-block w-full">
@@ -317,7 +370,6 @@ export default function CombinedDashboard() {
                           </div>
                         </div>
                       </td>
-                      
                       <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
                         ${period.totalPayout.toFixed(2)}
                       </td>
