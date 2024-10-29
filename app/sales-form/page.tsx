@@ -2,7 +2,6 @@
 
 import React, { useState } from 'react'
 import { CalendarIcon, XCircleIcon, ChevronDownIcon } from 'lucide-react'
-import { useRouter } from 'next/navigation'
 
 interface FormData {
   email: string
@@ -35,9 +34,9 @@ const modelOptions = [
 
 const chatterNames = ['Cado', 'Janko', 'Moot', 'Stefq', 'Dayo', 'Angel', 'Christine', 'Death', 'Eryx', 'Gem', 'Mei', 'Raluca', 'Rommel'];
 
-export default function SalesTrackerForm() {
+export default function Component() {
   const [formData, setFormData] = useState<FormData>(initialFormData)
-  const router = useRouter()
+  const [isSubmitted, setIsSubmitted] = useState(false)
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
     const { name, value } = e.target
@@ -53,16 +52,24 @@ export default function SalesTrackerForm() {
     const newData = [...existingData, formData]
     localStorage.setItem('chatterData', JSON.stringify(newData))
     setFormData(initialFormData)
-    router.push('/sales-data')
+    setIsSubmitted(true)
+    setTimeout(() => setIsSubmitted(false), 3000) // Hide success message after 3 seconds
   }
 
   const clearForm = () => {
     setFormData(initialFormData)
+    setIsSubmitted(false)
   }
 
   return (
     <div className="max-w-2xl mx-auto p-4 mt-8">
       <h1 className="text-3xl font-bold mb-6">CNCT Sales Tracker</h1>
+      {isSubmitted && (
+        <div className="bg-green-100 border border-green-400 text-green-700 px-4 py-3 rounded relative mb-4" role="alert">
+          <strong className="font-bold">Success!</strong>
+          <span className="block sm:inline"> Your sales data has been submitted.</span>
+        </div>
+      )}
       <form onSubmit={handleSubmit} className="space-y-4">
         <div>
           <label htmlFor="email" className="block text-sm font-medium text-gray-700">
