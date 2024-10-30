@@ -3,6 +3,7 @@
 import React, { useState, useEffect } from 'react'
 import { CalendarIcon, XCircleIcon, ChevronDownIcon } from 'lucide-react'
 import { useRouter } from 'next/navigation'
+import { db } from '@/app/utils/db'
 
 interface FormData {
   email: string
@@ -33,13 +34,13 @@ const modelOptions = [
   'Laura', 'Mia', 'Ava', 'Kira', 'Carina', 'Evelyn', 'Tina'
 ]
 
-const chatterNames = ['Cado', 'Janko', 'Moot', 'Stefq', 'Dayo', 'Angel', 'Christine', 'Death', 'Eryx', 'Gem', 'Mei', 'Raluca', 'Rommel'];
+const chatterNames = ['Cado', 'Janko', 'Moot', 'Stefq', 'Dayo', 'Angel', 'Christine', 'Death', 'Eryx', 'Gem', 'Mei', 'Raluca', 'Rommel']
 
 interface PayPeriod {
-  start: Date;
-  end: Date;
-  invoiceDate: Date;
-  chatterPayDate: Date;
+  start: Date
+  end: Date
+  invoiceDate: Date
+  chatterPayDate: Date
 }
 
 const payPeriods: PayPeriod[] = [
@@ -59,7 +60,10 @@ export default function SalesTrackerForm() {
   useEffect(() => {
     const now = new Date()
     const currentPeriod = payPeriods.find(period => now >= period.start && now <= period.end)
-    setCurrentPayPeriod(currentPeriod || payPeriods[0]) // Default to first period if current date is not in any period
+    setCurrentPayPeriod(currentPeriod || payPeriods[0])
+
+    // Migrate existing data if needed
+    db.migrateFromLocalStorage()
   }, [])
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
@@ -70,13 +74,18 @@ export default function SalesTrackerForm() {
     }))
   }
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
-    const existingData = JSON.parse(localStorage.getItem('chatterData') || '[]')
-    const newData = [...existingData, formData]
-    localStorage.setItem('chatterData', JSON.stringify(newData))
-    setFormData(initialFormData)
-    router.push('/sales-data')
+    try {
+      await db.saveData({
+        ...formData,
+        payPercentage: 7 // Default percentage
+      })
+      setFormData(initialFormData)
+      router.push('/sales-data')
+    } catch (error) {
+      console.error('Error saving data:', error)
+    }
   }
 
   const clearForm = () => {
@@ -91,6 +100,7 @@ export default function SalesTrackerForm() {
     <div className="max-w-2xl mx-auto p-4 mt-8">
       <h1 className="text-3xl font-bold mb-6">CNCT Sales Tracker</h1>
       <form onSubmit={handleSubmit} className="space-y-4">
+        {/* Your existing form JSX remains exactly the same */}
         <div>
           <label htmlFor="email" className="block text-sm font-medium text-gray-700">
             Email <span className="text-red-500">*</span>

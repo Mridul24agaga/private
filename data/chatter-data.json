@@ -1,0 +1,35 @@
+[
+  {
+    "email": "mridulthareja8@gmail.com",
+    "chatterName": "Cado",
+    "timezone": "",
+    "date": "2024-11-01",
+    "modelsWorkedOn": "Alexis",
+    "shiftTime": "",
+    "wasItCover": "",
+    "whoCovered": "",
+    "totalNetSale": "61"
+  },
+  {
+    "email": "mridulthareja8@gmail.com",
+    "chatterName": "",
+    "timezone": "EST",
+    "date": "2024-11-01",
+    "modelsWorkedOn": "Ellie",
+    "shiftTime": "",
+    "wasItCover": "Yes",
+    "whoCovered": "",
+    "totalNetSale": "617"
+  },
+  {
+    "email": "mridultharejaa@gmail.com",
+    "chatterName": "Cado",
+    "timezone": "",
+    "date": "2024-11-01",
+    "modelsWorkedOn": "Alexis",
+    "shiftTime": "",
+    "wasItCover": "Yes",
+    "whoCovered": "",
+    "totalNetSale": "728"
+  }
+]

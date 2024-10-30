@@ -4,8 +4,10 @@ import React, { useEffect, useState } from 'react'
 import Link from 'next/link'
 import { motion, AnimatePresence } from 'framer-motion'
 import { ChevronDown, ChevronRight, Menu, X, Home, Zap, ChartBar, DollarSign, FileText, Edit2, Save } from 'lucide-react'
+import { db } from '@/app/utils/db'
 
 interface FormData {
+  id?: number
   email: string
   chatterName: string
   timezone: string
@@ -214,37 +216,46 @@ export default function SalesDashboard() {
   }, [])
 
   useEffect(() => {
-    const data: FormData[] = JSON.parse(localStorage.getItem('chatterData') || '[]')
-    const groupedData: PayPeriodGroup[] = payPeriods.map(payPeriod => {
-      const periodEntries = data.filter(entry => {
-        const entryDate = new Date(entry.date)
-        return entryDate >= new Date(payPeriod.start) && entryDate <= new Date(payPeriod.end)
-      })
+    const fetchData = async () => {
+      try {
+        const data = await db.getAllData()
+        const groupedData: PayPeriodGroup[] = payPeriods.map(payPeriod => {
+          const periodEntries = data.filter(entry => {
+            const entryDate = new Date(entry.date)
+            return entryDate >= new Date(payPeriod.start) && entryDate <= new Date(payPeriod.end)
+          })
 
-      const chatterGroups: ChatterGroup[] = periodEntries.reduce((acc: ChatterGroup[], item: FormData) => {
-        const payPercentage = item.payPercentage || 7 // Default to 7% if not set
-        const pay = parseFloat(item.totalNetSale) * (payPercentage / 100)
-        const itemWithPay = { ...item, pay, payPercentage }
+          const chatterGroups: ChatterGroup[] = periodEntries.reduce((acc: ChatterGroup[], item: FormData) => {
+            const payPercentage = item.payPercentage || 7 // Default to 7% if not set
+            const pay = parseFloat(item.totalNetSale) * (payPercentage / 100)
+            const itemWithPay = { ...item, pay, payPercentage }
 
-        let group = acc.find(g => g.chatterName === item.chatterName)
-        if (!group) {
-          group = { chatterName: item.chatterName, totalPay: 0, entries: [], payPercentage }
-          acc.push(group)
-        }
+            let group = acc.find(g => g.chatterName === item.chatterName)
+            if (!group) {
+              group = { chatterName: item.chatterName, totalPay: 0, entries: [], payPercentage }
+              acc.push(group)
+            }
 
-        group.totalPay += pay
-        group.entries.push(itemWithPay)
+            group.totalPay += pay
+            group.entries.push(itemWithPay)
 
-        return acc
-      }, [])
+            return acc
+          }, [])
 
-      const totalPay = chatterGroups.reduce((sum, group) => sum + group.totalPay, 0)
+          const totalPay = chatterGroups.reduce((sum, group) => sum + group.totalPay, 0)
 
-      return { payPeriod, chatterGroups, totalPay }
-    })
+          return { payPeriod, chatterGroups, totalPay }
+        })
 
-    setPayPeriodGroups(groupedData)
-    setIsLoading(false)
+        setPayPeriodGroups(groupedData)
+        setIsLoading(false)
+      } catch (error) {
+        console.error('Error fetching data:', error)
+        setIsLoading(false)
+      }
+    }
+
+    fetchData()
   }, [])
 
   const togglePayPeriod = (payPeriodStart: string) => {
@@ -261,29 +272,57 @@ export default function SalesDashboard() {
     setEditedPercentage(currentPercentage)
   }
 
-  const saveEditedPercentage = (payPeriodStart: string, chatterName: string) => {
-    setPayPeriodGroups(prevGroups => {
-      return prevGroups.map(group => {
-        if (group.payPeriod.start === payPeriodStart) {
-          const updatedChatterGroups = group.chatterGroups.map(chatter => {
-            if (chatter.chatterName === chatterName) {
-              const updatedEntries = chatter.entries.map(entry => ({
-                ...entry,
-                payPercentage: editedPercentage,
-                pay: parseFloat(entry.totalNetSale) * (editedPercentage / 100)
-              }))
-              const totalPay = updatedEntries.reduce((sum, entry) => sum + (entry.pay || 0), 0)
-              return { ...chatter, entries: updatedEntries, totalPay, payPercentage: editedPercentage }
-            }
-            return chatter
+  const saveEditedPercentage = async (payPeriodStart: string, chatterName: string) => {
+    try {
+      const data = await db.getAllData()
+      
+      // Update all entries for this chatter in this period
+      for (const entry of data) {
+        if (entry.chatterName === chatterName && 
+            new Date(entry.date) >= new Date(payPeriodStart)) {
+          await db.updateData(entry.id!, {
+            ...entry,
+            payPercentage: editedPercentage
           })
-          const totalPay = updatedChatterGroups.reduce((sum, chatter) => sum + chatter.totalPay, 0)
-          return { ...group, chatterGroups: updatedChatterGroups, totalPay }
         }
-        return group
+      }
+
+      // Refetch data to update UI
+      const updatedData = await db.getAllData()
+      const groupedData = payPeriods.map(payPeriod => {
+        // ... same grouping logic as in fetchData
+        const periodEntries = updatedData.filter(entry => {
+          const entryDate = new Date(entry.date)
+          return entryDate >= new Date(payPeriod.start) && entryDate <= new Date(payPeriod.end)
+        })
+
+        const chatterGroups = periodEntries.reduce((acc: ChatterGroup[], item: FormData) => {
+          const payPercentage = item.payPercentage || 7
+          const pay = parseFloat(item.totalNetSale) * (payPercentage / 100)
+          const itemWithPay = { ...item, pay, payPercentage }
+
+          let group = acc.find(g => g.chatterName === item.chatterName)
+          if (!group) {
+            group = { chatterName: item.chatterName, totalPay: 0, entries: [], payPercentage }
+            acc.push(group)
+          }
+
+          group.totalPay += pay
+          group.entries.push(itemWithPay)
+
+          return acc
+        }, [])
+
+        const totalPay = chatterGroups.reduce((sum, group) => sum + group.totalPay, 0)
+
+        return { payPeriod, chatterGroups, totalPay }
       })
-    })
-    setEditingChatter(null)
+
+      setPayPeriodGroups(groupedData)
+      setEditingChatter(null)
+    } catch (error) {
+      console.error('Error updating percentage:', error)
+    }
   }
 
   if (isLoading) {
@@ -300,6 +339,7 @@ export default function SalesDashboard() {
             <h1 className="text-2xl font-bold text-gray-900">Sales Data</h1>
             <Button
               variant="outline"
+              
               size="icon"
               className="md:hidden"
               onClick={() => setIsSidebarOpen(!isSidebarOpen)}
