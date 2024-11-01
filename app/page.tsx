@@ -3,7 +3,7 @@
 import React, { useState, useEffect } from 'react'
 import { CalendarIcon, XCircleIcon, ChevronDownIcon } from 'lucide-react'
 import { useRouter } from 'next/navigation'
-import { db } from '@/app/utils/db'
+import { supabase } from '@/app/utils/supabase'
 
 interface FormData {
   email: string
@@ -61,9 +61,6 @@ export default function SalesTrackerForm() {
     const now = new Date()
     const currentPeriod = payPeriods.find(period => now >= period.start && now <= period.end)
     setCurrentPayPeriod(currentPeriod || payPeriods[0])
-
-    // Migrate existing data if needed
-    db.migrateFromLocalStorage()
   }, [])
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
@@ -77,10 +74,23 @@ export default function SalesTrackerForm() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     try {
-      await db.saveData({
-        ...formData,
-        payPercentage: 7 // Default percentage
-      })
+      const { data, error } = await supabase
+        .from('sales')
+        .insert([{
+          email: formData.email,
+          chatter_name: formData.chatterName,
+          timezone: formData.timezone,
+          date: formData.date,
+          models_worked_on: formData.modelsWorkedOn,
+          shift_time: formData.shiftTime,
+          was_it_cover: formData.wasItCover,
+          who_covered: formData.whoCovered,
+          total_net_sale: formData.totalNetSale,
+          pay_percentage: 7 // Default percentage
+        }])
+
+      if (error) throw error
+
       setFormData(initialFormData)
       router.push('/sales-data')
     } catch (error) {
@@ -100,7 +110,6 @@ export default function SalesTrackerForm() {
     <div className="max-w-2xl mx-auto p-4 mt-8">
       <h1 className="text-3xl font-bold mb-6">CNCT Sales Tracker</h1>
       <form onSubmit={handleSubmit} className="space-y-4">
-        {/* Your existing form JSX remains exactly the same */}
         <div>
           <label htmlFor="email" className="block text-sm font-medium text-gray-700">
             Email <span className="text-red-500">*</span>

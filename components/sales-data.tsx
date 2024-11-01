@@ -4,9 +4,26 @@ import React, { useEffect, useState } from 'react'
 import Link from 'next/link'
 import { motion, AnimatePresence } from 'framer-motion'
 import { ChevronDown, ChevronRight, Menu, X, Home, Zap, ChartBar, DollarSign, FileText, Edit2, Save } from 'lucide-react'
-import { db } from '@/app/utils/db'
+import { supabase } from '@/app/utils/supabase'
 
+// Database schema interface (snake_case)
 interface FormData {
+  id?: number
+  email: string
+  chatter_name: string
+  timezone: string
+  date: string
+  models_worked_on: string
+  shift_time: string
+  was_it_cover: string
+  who_covered: string
+  total_net_sale: string
+  pay?: number
+  pay_percentage: number
+}
+
+// UI representation interface (camelCase)
+interface ChatterEntry {
   id?: number
   email: string
   chatterName: string
@@ -17,14 +34,14 @@ interface FormData {
   wasItCover: string
   whoCovered: string
   totalNetSale: string
-  pay?: number
+  pay: number
   payPercentage: number
 }
 
 interface ChatterGroup {
   chatterName: string
   totalPay: number
-  entries: FormData[]
+  entries: ChatterEntry[]
   payPercentage: number
 }
 
@@ -84,7 +101,15 @@ const ScrollArea = React.forwardRef<HTMLDivElement, ScrollAreaProps>(
 )
 ScrollArea.displayName = "ScrollArea"
 
-const menuItems = [
+interface MenuItem {
+  name: string
+  icon: React.ElementType
+  hasDropdown?: boolean
+  url?: string
+  submenu?: { name: string; url: string }[]
+}
+
+const menuItems: MenuItem[] = [
   { name: 'Home', icon: Home, hasDropdown: false },
   { name: 'Sales Data', icon: ChartBar, hasDropdown: true, submenu: [
     { name: 'Form', url: '/form' },
@@ -94,7 +119,12 @@ const menuItems = [
   { name: 'Invoice Creator', icon: FileText, hasDropdown: false, url: '/invoice' },
 ]
 
-const Sidebar = ({ isOpen, setIsOpen }: { isOpen: boolean; setIsOpen: (isOpen: boolean) => void }) => {
+interface SidebarProps {
+  isOpen: boolean
+  setIsOpen: (isOpen: boolean) => void
+}
+
+const Sidebar: React.FC<SidebarProps> = ({ isOpen, setIsOpen }) => {
   const [expandedItems, setExpandedItems] = useState<string[]>([])
 
   const toggleExpand = (itemName: string) => {
@@ -218,26 +248,50 @@ export default function SalesDashboard() {
   useEffect(() => {
     const fetchData = async () => {
       try {
-        const data = await db.getAllData()
+        const { data, error } = await supabase
+          .from('sales')
+          .select('*')
+          .order('date', { ascending: true })
+
+        if (error) throw error
+
+        // Fix for line 259: Add null check and provide default empty array
+        const typedData: FormData[] = Array.isArray(data) ? data : [];
+
         const groupedData: PayPeriodGroup[] = payPeriods.map(payPeriod => {
-          const periodEntries = data.filter(entry => {
+          const periodEntries = typedData.filter(entry => {
             const entryDate = new Date(entry.date)
             return entryDate >= new Date(payPeriod.start) && entryDate <= new Date(payPeriod.end)
           })
 
           const chatterGroups: ChatterGroup[] = periodEntries.reduce((acc: ChatterGroup[], item: FormData) => {
-            const payPercentage = item.payPercentage || 7 // Default to 7% if not set
-            const pay = parseFloat(item.totalNetSale) * (payPercentage / 100)
-            const itemWithPay = { ...item, pay, payPercentage }
+            const payPercentage = item.pay_percentage || 7
+            const pay = parseFloat(item.total_net_sale) * (payPercentage / 100)
+            
+            // Transform database fields to UI fields
+            const transformedEntry: ChatterEntry = {
+              id: item.id,
+              email: item.email,
+              chatterName: item.chatter_name,
+              timezone: item.timezone,
+              date: item.date,
+              modelsWorkedOn: item.models_worked_on,
+              shiftTime: item.shift_time,
+              wasItCover: item.was_it_cover,
+              whoCovered: item.who_covered,
+              totalNetSale: item.total_net_sale,
+              pay,
+              payPercentage
+            }
 
-            let group = acc.find(g => g.chatterName === item.chatterName)
+            let group = acc.find(g => g.chatterName === item.chatter_name)
             if (!group) {
-              group = { chatterName: item.chatterName, totalPay: 0, entries: [], payPercentage }
+              group = { chatterName: item.chatter_name, totalPay: 0, entries: [], payPercentage }
               acc.push(group)
             }
 
             group.totalPay += pay
-            group.entries.push(itemWithPay)
+            group.entries.push(transformedEntry)
 
             return acc
           }, [])
@@ -274,41 +328,71 @@ export default function SalesDashboard() {
 
   const saveEditedPercentage = async (payPeriodStart: string, chatterName: string) => {
     try {
-      const data = await db.getAllData()
-      
-      // Update all entries for this chatter in this period
-      for (const entry of data) {
-        if (entry.chatterName === chatterName && 
-            new Date(entry.date) >= new Date(payPeriodStart)) {
-          await db.updateData(entry.id!, {
-            ...entry,
-            payPercentage: editedPercentage
-          })
-        }
+      const { data: entries, error: fetchError } = await supabase
+        .from('sales')
+        .select('*')
+        .eq('chatter_name', chatterName)
+        .gte('date', payPeriodStart)
+
+      if (fetchError) throw fetchError
+
+      // Fix for line 344: Add null check and provide default empty array
+      const validEntries: FormData[] = Array.isArray(entries) ? entries : [];
+
+      // Update all matching entries
+      for (const entry of validEntries) {
+        const { error: updateError } = await supabase
+          .from('sales')
+          .update({ pay_percentage: editedPercentage })
+          .eq('id', entry.id)
+
+        if (updateError) throw updateError
       }
 
       // Refetch data to update UI
-      const updatedData = await db.getAllData()
+      const { data: updatedData, error } = await supabase
+        .from('sales')
+        .select('*')
+        .order('date', { ascending: true })
+
+      if (error) throw error
+
+      // Fix for line 358: Add null check and provide default empty array
+      const typedUpdatedData: FormData[] = Array.isArray(updatedData) ? updatedData : [];
+
       const groupedData = payPeriods.map(payPeriod => {
-        // ... same grouping logic as in fetchData
-        const periodEntries = updatedData.filter(entry => {
+        const periodEntries = typedUpdatedData.filter(entry => {
           const entryDate = new Date(entry.date)
           return entryDate >= new Date(payPeriod.start) && entryDate <= new Date(payPeriod.end)
         })
 
         const chatterGroups = periodEntries.reduce((acc: ChatterGroup[], item: FormData) => {
-          const payPercentage = item.payPercentage || 7
-          const pay = parseFloat(item.totalNetSale) * (payPercentage / 100)
-          const itemWithPay = { ...item, pay, payPercentage }
+          const payPercentage = item.pay_percentage || 7
+          const pay = parseFloat(item.total_net_sale) * (payPercentage / 100)
+          
+          const transformedEntry: ChatterEntry = {
+            id: item.id,
+            email: item.email,
+            chatterName:  item.chatter_name,
+            timezone: item.timezone,
+            date:  item.date,
+            modelsWorkedOn: item.models_worked_on,
+            shiftTime: item.shift_time,
+            wasItCover: item.was_it_cover,
+            whoCovered: item.who_covered,
+            totalNetSale: item.total_net_sale,
+            pay,
+            payPercentage
+          }
 
-          let group = acc.find(g => g.chatterName === item.chatterName)
+          let group = acc.find(g => g.chatterName === item.chatter_name)
           if (!group) {
-            group = { chatterName: item.chatterName, totalPay: 0, entries: [], payPercentage }
+            group = { chatterName: item.chatter_name, totalPay: 0, entries: [], payPercentage }
             acc.push(group)
           }
 
           group.totalPay += pay
-          group.entries.push(itemWithPay)
+          group.entries.push(transformedEntry)
 
           return acc
         }, [])
@@ -339,7 +423,6 @@ export default function SalesDashboard() {
             <h1 className="text-2xl font-bold text-gray-900">Sales Data</h1>
             <Button
               variant="outline"
-              
               size="icon"
               className="md:hidden"
               onClick={() => setIsSidebarOpen(!isSidebarOpen)}
@@ -353,15 +436,18 @@ export default function SalesDashboard() {
           <div className="container mx-auto px-4 sm:px-6 lg:px-8 py-8">
             <ScrollArea className="h-[calc(100vh-8rem)] pr-4">
               {payPeriodGroups.map((group) => (
-                <div key={group.payPeriod.start} 
-                     className="mb-8 bg-white shadow overflow-hidden sm:rounded-lg">
-                  <div className="px-4 py-5 sm:px-6 flex justify-between items-center cursor-pointer"
-                       onClick={() => togglePayPeriod(group.payPeriod.start)}>
+                <div key={group.payPeriod.start} className="mb-8 bg-white shadow overflow-hidden sm:rounded-lg">
+                  <div
+                    className="px-4 py-5 sm:px-6 flex justify-between items-center cursor-pointer"
+                    onClick={() => togglePayPeriod(group.payPeriod.start)}
+                  >
                     <h3 className="text-lg leading-6 font-medium text-gray-900">
                       Pay Period: {group.payPeriod.start} to {group.payPeriod.end}
                     </h3>
                     <div className="flex items-center">
-                      <span className="mr-2 text-sm text-gray-500">Total Pay: ${group.totalPay.toFixed(2)}</span>
+                      <span className="mr-2 text-sm text-gray-500">
+                        Total Pay: ${group.totalPay.toFixed(2)}
+                      </span>
                       <ChevronDown
                         className={`h-5 w-5 text-gray-500 transform transition-transform ${
                           expandedPayPeriod === group.payPeriod.start ? 'rotate-180' : ''
@@ -377,7 +463,9 @@ export default function SalesDashboard() {
                             className="px-4 py-4 sm:px-6 flex justify-between items-center cursor-pointer hover:bg-gray-50"
                             onClick={() => toggleChatter(group.payPeriod.start, chatterGroup.chatterName)}
                           >
-                            <p className="text-sm font-medium text-indigo-600 truncate">{chatterGroup.chatterName}</p>
+                            <p className="text-sm font-medium text-indigo-600 truncate">
+                              {chatterGroup.chatterName}
+                            </p>
                             <div className="flex items-center">
                               <span className="mr-2 text-sm text-gray-500">
                                 Total Pay: ${chatterGroup.totalPay.toFixed(2)} ({chatterGroup.payPercentage}%)
@@ -389,6 +477,7 @@ export default function SalesDashboard() {
                                     value={editedPercentage}
                                     onChange={(e) => setEditedPercentage(Number(e.target.value))}
                                     className="w-16 px-2 py-1 text-sm border rounded mr-2"
+                                    onClick={(e) => e.stopPropagation()}
                                   />
                                   <Button
                                     variant="outline"
@@ -444,7 +533,7 @@ export default function SalesDashboard() {
                                       <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{entry.wasItCover}</td>
                                       <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{entry.whoCovered}</td>
                                       <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">${entry.totalNetSale}</td>
-                                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">${entry.pay?.toFixed(2)}</td>
+                                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">${entry.pay.toFixed(2)}</td>
                                     </tr>
                                   ))}
                                 </tbody>
